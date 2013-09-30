@@ -246,12 +246,33 @@ static Mixpanel *sharedInstance = nil;
 
 - (NSString *)deviceModel
 {
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+    const char *name = "hw.machine";
+#else
+    const char *name = "hw.model";
+#endif
     size_t size;
-    sysctlbyname("hw.machine", NULL, &size, NULL, 0);
+    sysctlbyname(name, NULL, &size, NULL, 0);
     char answer[size];
-    sysctlbyname("hw.machine", answer, &size, NULL, 0);
+    sysctlbyname(name, answer, &size, NULL, 0);
     NSString *results = [NSString stringWithCString:answer encoding:NSUTF8StringEncoding];
     return results;
+
+}
+
+- (NSString *)osVersion
+{
+    static NSString *ver = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+        ver = [[UIDevice currentDevice] systemVersion];
+#else
+        NSDictionary *d = [NSDictionary dictionaryWithContentsOfFile:@"/System/Library/CoreServices/SystemVersion.plist"];
+        ver = [d objectForKey:@"ProductVersion"];
+#endif
+    });
+    return ver;
 }
 
 - (NSMutableDictionary *)collectAutomaticProperties
@@ -284,15 +305,12 @@ static Mixpanel *sharedInstance = nil;
     }
 #else
     [p setValue:@"osx" forKey:@"mp_lib"];
-    
-    SInt32 versionMajor=0, versionMinor=0, versionBugFix=0;
-    Gestalt(gestaltSystemVersionMajor, &versionMajor);
-    Gestalt(gestaltSystemVersionMinor, &versionMinor);
-    Gestalt(gestaltSystemVersionBugFix, &versionBugFix);
-    NSString *version = [NSString stringWithFormat:@"%d.%d.%d", versionMajor, versionMinor, versionBugFix];
-    
+    [p setValue:VERSION forKey:@"$lib_version"];
+    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"$app_version"];
+    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] forKey:@"$app_release"];
+    [p setValue:@"Apple" forKey:@"$manufacturer"];
     [p setValue:@"OS X" forKey:@"$os"];
-    [p setValue:version forKey:@"$os_version"];
+    [p setValue:[self osVersion] forKey:@"$os_version"];
     NSString *deviceModel = [self deviceModel];
     [p setValue:deviceModel forKey:@"$model"];
     [p setValue:deviceModel forKey:@"mp_device_model"]; // legacy
@@ -1058,9 +1076,10 @@ static Mixpanel *sharedInstance = nil;
     }
 #else
     NSMutableDictionary *p = [NSMutableDictionary dictionary];
-    [p setValue:[self.mixpanel deviceModel] forKey:@"$ios_device_model"];
-    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"$ios_app_version"];
-    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] forKey:@"$ios_app_release"];
+    [p setValue:[self.mixpanel osVersion] forKey:@"$mac_version"];
+    [p setValue:[self.mixpanel deviceModel] forKey:@"$mac_device_model"];
+    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"$mac_app_version"];
+    [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] forKey:@"$mac_app_release"];
 #endif
     return [NSDictionary dictionaryWithDictionary:p];
 }
