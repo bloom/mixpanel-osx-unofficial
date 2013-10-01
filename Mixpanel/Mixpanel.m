@@ -911,7 +911,9 @@ static Mixpanel *sharedInstance = nil;
 - (void)applicationDidBecomeActive:(NSNotification *)notification
 {
     MixpanelDebug(@"%@ application did become active", self);
-    [self startFlushTimer];
+    if (!self.flushOnInactive) {
+        [self startFlushTimer];
+    }
 }
 
 - (void)applicationWillResignActive:(NSNotification *)notification
