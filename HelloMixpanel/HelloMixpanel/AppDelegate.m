@@ -23,7 +23,7 @@
 #import "ViewController.h"
 
 // IMPORTANT!!! replace with you api token from https://mixpanel.com/account/
-#define MIXPANEL_TOKEN @"YOUR MIXPANEL PROJECT TOKEN"
+#define MIXPANEL_TOKEN @"YOUR_MIXPANEL_PROJECT_TOKEN"
 
 @implementation AppDelegate
 
@@ -38,31 +38,34 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
-    
+
     // Override point for customization after application launch.
-    
+
     // Initialize the MixpanelAPI object
     self.mixpanel = [Mixpanel sharedInstanceWithToken:MIXPANEL_TOKEN];
+
+    self.mixpanel.checkForSurveysOnActive = YES;
+    self.mixpanel.showSurveyOnActive = YES; //Change this to NO to show your surveys manually.
 
     // Set the upload interval to 20 seconds for demonstration purposes. This would be overkill for most applications.
     self.mixpanel.flushInterval = 20; // defaults to 60 seconds
 
+    // Set some super properties, which will be added to every tracked event
+    [self.mixpanel registerSuperProperties:@{@"Plan": @"Premium"}];
+
     // Name a user in Mixpanel Streams
     self.mixpanel.nameTag = @"Walter Sobchak";
-    
-    // Set some super properties, which will be added to every tracked event
-    [self.mixpanel registerSuperProperties:[NSDictionary dictionaryWithObjectsAndKeys:@"Premium", @"Plan", nil]];
-    
+
     self.viewController = [[[ViewController alloc] initWithNibName:@"ViewController" bundle:nil] autorelease];
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
-    
+
     [[UIApplication sharedApplication] registerForRemoteNotificationTypes:(UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeSound | UIRemoteNotificationTypeAlert)];
-    
+
     return YES;
 }
 
-#pragma mark * Push notifications
+#pragma mark - Push notifications
 
 - (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)devToken {
     [self.mixpanel.people addPushDeviceToken:devToken];
@@ -79,9 +82,8 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo
 {
     // Show alert for push notifications recevied while the app is running
-    NSString *message = [[userInfo objectForKey:@"aps"] objectForKey:@"alert"];
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@""
-                                                    message:message
+                                                    message:userInfo[@"aps"][@"alert"]
                                                    delegate:nil
                                           cancelButtonTitle:@"OK"
                                           otherButtonTitles:nil];
@@ -89,7 +91,7 @@
     [alert release];
 }
 
-#pragma mark * Session timing example
+#pragma mark - Session timing example
 
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
@@ -103,7 +105,7 @@
     [[Mixpanel sharedInstance] track:@"Session" properties:[NSDictionary dictionaryWithObject:seconds forKey:@"Length"]];
 }
 
-#pragma mark * Background task tracking test
+#pragma mark - Background task tracking test
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
@@ -121,7 +123,7 @@
 
         // track some events and set some people properties
         Mixpanel *mixpanel = [Mixpanel sharedInstance];
-        [mixpanel registerSuperProperties:[NSDictionary dictionaryWithObject:@"Hi!" forKey:@"Background Super Property"]];
+        [mixpanel registerSuperProperties:@{@"Background Super Property": @"Hi!"}];
         [mixpanel track:@"Background Event"];
         [mixpanel.people set:@"Background Property" to:[NSDate date]];
 
@@ -131,7 +133,6 @@
     });
 
     NSLog(@"%@ dispatched background task %lu", self, (unsigned long)self.bgTask);
-
 }
 
 @end

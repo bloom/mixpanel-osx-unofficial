@@ -17,16 +17,17 @@
 // limitations under the License.
 
 #import "Mixpanel.h"
+#import "MPSurvey.h"
 
 #import "ViewController.h"
 
-@interface ViewController ()
+@interface ViewController () <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 
 @property(nonatomic, retain) IBOutlet UISegmentedControl *genderControl;
 @property(nonatomic, retain) IBOutlet UISegmentedControl *weaponControl;
-
-- (IBAction)trackEvent:(id)sender;
-- (IBAction)sendPeopleRecord:(id)sender;
+@property(nonatomic, retain) IBOutlet UIImageView *fakeBackground;
+@property(nonatomic, retain) IBOutlet UITextField *surveyIDField;
+@property(nonatomic, retain) IBOutlet UIScrollView *scrollView;
 
 @end
 
@@ -36,47 +37,35 @@
 {
     self.genderControl = nil;
     self.weaponControl = nil;
+    self.fakeBackground = nil;
     [super dealloc];
 }
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor colorWithPatternImage: [UIImage imageNamed:@"grid.png"]];
-    UIScrollView *tempScrollView = (UIScrollView *)self.view;
-    tempScrollView.contentSize = CGSizeMake(320, 342);
-}
 
-- (void)viewDidUnload
-{
-    [super viewDidUnload];
-    // Release any retained subviews of the main view.
-}
+    _scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    _scrollView.contentSize = self.view.bounds.size;
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
-{
-    return YES;
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
+    [self.view addGestureRecognizer:tap];
 }
 
 - (IBAction)trackEvent:(id)sender
 {
     Mixpanel *mixpanel = [Mixpanel sharedInstance];
-    [mixpanel track:@"Player Create" properties:[NSDictionary dictionaryWithObjectsAndKeys:
-                                                 [self.genderControl titleForSegmentAtIndex:self.genderControl.selectedSegmentIndex], @"gender",
-                                                 [self.weaponControl titleForSegmentAtIndex:self.weaponControl.selectedSegmentIndex], @"weapon",
-                                                 nil]];
+    NSString *gender = [self.genderControl titleForSegmentAtIndex:(NSUInteger)self.genderControl.selectedSegmentIndex];
+    NSString *weapon = [self.weaponControl titleForSegmentAtIndex:(NSUInteger)self.weaponControl.selectedSegmentIndex];
+    [mixpanel track:@"Player Create" properties:@{@"gender": gender, @"weapon": weapon}];
 }
 
-- (IBAction)sendPeopleRecord:(id)sender
+- (IBAction)setPeopleProperties:(id)sender
 {
     Mixpanel *mixpanel = [Mixpanel sharedInstance];
-    [mixpanel.people set:[NSDictionary dictionaryWithObjectsAndKeys:
-                          [self.genderControl titleForSegmentAtIndex:self.genderControl.selectedSegmentIndex], @"gender",
-                          [self.weaponControl titleForSegmentAtIndex:self.weaponControl.selectedSegmentIndex], @"weapon",
-                          @"Demo", @"$first_name",
-                          @"User", @"$last_name",
-                          @"user@example.com", @"$email",
-                          nil]];
+    NSString *gender = [self.genderControl titleForSegmentAtIndex:(NSUInteger)self.genderControl.selectedSegmentIndex];
+    NSString *weapon = [self.weaponControl titleForSegmentAtIndex:(NSUInteger)self.weaponControl.selectedSegmentIndex];
+    [mixpanel.people set:@{@"gender": gender, @"weapon": weapon}];
     // Mixpanel People requires that you explicitly set a distinct ID for the current user. In this case,
     // we're using the automatically generated distinct ID from event tracking, based on the device's MAC address.
     // It is strongly recommended that you use the same distinct IDs for Mixpanel Engagement and Mixpanel People.
@@ -84,6 +73,51 @@
     // identify: is called and flush them at that time. That way, you can set properties before a user is logged in
     // and identify them once you know their user ID.
     [mixpanel identify:mixpanel.distinctId];
+}
+
+- (IBAction)showSurvey:(id)sender
+{
+    Mixpanel *mixpanel = [Mixpanel sharedInstance];
+
+    if ([_surveyIDField.text length] > 0) {
+        [mixpanel showSurveyWithID:(NSUInteger)([_surveyIDField.text integerValue])];
+
+    } else {
+        [mixpanel showSurvey];
+    }
+    [_surveyIDField resignFirstResponder];
+}
+
+- (IBAction)changeBackground
+{
+    if (_fakeBackground.image) {
+        _fakeBackground.image = nil;
+        _fakeBackground.hidden = YES;
+    } else {
+        UIImagePickerController *imagePickerController = [[UIImagePickerController alloc] init];
+        imagePickerController.modalPresentationStyle = UIModalPresentationCurrentContext;
+        imagePickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+        imagePickerController.delegate = self;
+        [self presentViewController:imagePickerController animated:YES completion:nil];
+    }
+}
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info
+{
+    UIImage *image = [info valueForKey:UIImagePickerControllerOriginalImage];
+    _fakeBackground.image = image;
+    _fakeBackground.hidden = NO;
+    [self dismissViewControllerAnimated:YES completion:NULL];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker
+{
+    [self dismissViewControllerAnimated:YES completion:NULL];
+}
+
+- (void)dismissKeyboard
+{
+    [_surveyIDField resignFirstResponder];
 }
 
 @end
