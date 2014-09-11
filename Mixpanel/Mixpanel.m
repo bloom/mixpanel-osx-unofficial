@@ -361,7 +361,7 @@ static Mixpanel *sharedInstance = nil;
         [p setValue:carrier.carrierName forKey:@"$carrier"];
     }
     if (NSClassFromString(@"ASIdentifierManager")) {
-        [p setValue:[[ASIdentifierManager sharedManager].advertisingIdentifier UUIDString] forKey:@"$ios_ifa"];
+        [p setValue:[[NSClassFromString(@"ASIdentifierManager") sharedManager].advertisingIdentifier UUIDString] forKey:@"$ios_ifa"];
     }
 #else
     [p setValue:@"osx" forKey:@"mp_lib"];
@@ -495,7 +495,7 @@ static Mixpanel *sharedInstance = nil;
     NSString *distinctId = nil;
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
     if (NSClassFromString(@"ASIdentifierManager")) {
-        distinctId = [[ASIdentifierManager sharedManager].advertisingIdentifier UUIDString];
+        distinctId = [[NSClassFromString(@"ASIdentifierManager") sharedManager].advertisingIdentifier UUIDString];
     }
 #endif
     if (!distinctId) {
@@ -1260,7 +1260,7 @@ static Mixpanel *sharedInstance = nil;
     [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"$ios_app_version"];
     [p setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"] forKey:@"$ios_app_release"];
     if (NSClassFromString(@"ASIdentifierManager")) {
-        [p setValue:[[ASIdentifierManager sharedManager].advertisingIdentifier UUIDString] forKey:@"$ios_ifa"];
+        [p setValue:[[NSClassFromString(@"ASIdentifierManager") sharedManager].advertisingIdentifier UUIDString] forKey:@"$ios_ifa"];
     }
 #else
     NSMutableDictionary *p = [NSMutableDictionary dictionary];
